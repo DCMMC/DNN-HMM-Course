@@ -5,6 +5,50 @@
 import numpy as np
 
 
+def sanity_grader_hmm():
+    # @Author: DCMMC (肖文韬 2020214245 深计研2020)
+    # @Email: xwt20@mails.tsinghua.edu.cn
+    print('\n\nSanity check for Task 1:')
+    scores = [13, 13, 14]
+    res_ans = np.zeros(3).astype(np.bool)
+    q1_prob = 0.0342796928
+    fwd = np.array([[0.1,        0.16,       0.28      ],
+                    [0.127,      0.1176,     0.027     ],
+                    [0.03344,    0.05616,    0.045024  ],
+                    [0.0258544,  0.03428928, 0.00772992],
+                    [0.00914158, 0.02052196, 0.00461615]])
+    bwd = np.array([[0.06272704, 0.06416424, 0.06335968],
+                    [0.127352,   0.124808,   0.126984  ],
+                    [0.2536,     0.258,      0.2512    ],
+                    [0.5,        0.51,       0.5       ],
+                    [1.,         1.,         1.        ]])
+    q2_prob = 0.00259307
+    best_path = np.array([2, 0, 2, 0, 1])
+    model = HMM()
+    observations = np.array([0, 1, 0, 1, 1])  # [THU, PKU, THU, PKU, PKU]
+    p_fwd, q1_fwd = model.forward(observations)
+    if np.allclose(q1_fwd, q1_prob) and np.allclose(fwd, p_fwd):
+        res_ans[0] = True
+        print('(1) Check forward algorithm success!')
+    else:
+        print('(1) Check forward algorithm failed!')
+    p_bwd, q1_bwd = model.backward(observations)
+    if np.allclose(q1_bwd, q1_prob) and np.allclose(bwd, p_bwd):
+        res_ans[1] = True
+        print('(2) Check backward algorithm success!')
+    else:
+        print('(2) Check backward algorithm failed!')
+    prob, path = model.viterbi(observations)
+    if np.allclose(q2_prob, prob) and all(path == best_path):
+        res_ans[2] = True
+        print('(3) Check viterbi algorithm success!')
+    else:
+        print('(3) Check viterbi algorithm failed!')
+    print(f'All test done.\n' +
+          f'Results: {np.sum(res_ans)} success, {np.sum(res_ans == False)} failed.\n' +
+          f'Score: {np.sum(res_ans * scores)}.\n')
+
+
 class HMM:
     """Hidden Markov Model
 
@@ -33,6 +77,7 @@ class HMM:
                            [0.4, 0.6],
                            [0.7, 0.3]])
 
+
     def forward(self, ob):
         """HMM Forward Algorithm.
 
@@ -54,7 +99,8 @@ class HMM:
         # PUT YOUR CODE HERE.
         # Forward algorithm:
         # Input: O = o_1, o_2, \cdots, o_T, \lambda = {\pi, A, B}
-        # > O: observations, \pi: initial probability, A: state transition matrix, B: emission matrix.
+        # > O: observations, \pi: initial probability, A: hidden state transition matrix
+        # > B: emission matrix.
         # Output: P(O | \lambda)
         #   # Law of total prob for all valid hidden state seq Q = q_1, q_2, \cdots, q_T
         #   = \sum_{Q} P(O, Q | \lambda)
@@ -136,6 +182,28 @@ class HMM:
         # Begin Assignment
 
         # PUT YOUR CODE HERE.
+        # Exhaustive search of Q^* = \argmax_Q P(Q | O, \lambda)
+        #   = \argmax_Q P(Q, O | \lambda) / P(O | \lambda)
+        #   = \argmax_Q P(Q, O | \lambda) # remove unrelated terms
+        #   = \argmax_Q P(O | Q, \lambda) P(Q | \lambda) # Bayes
+        #   = \argmax_Q \prod_{t=1}^T B(q_t, o_t) \pi(q_1) \prod_{t=2}^T A(q_{t-1}, q_t)
+        # Optimizing:
+        #   same as forward algorithm,
+        #   let \delta_t (j) = \argmax_{q_1, q_2, \cdots, q_{t-1}}
+        #       P(q_1, \cdots, q_{t-1}, q_t=s_j, o_1, \cdots, o_t | \lambda)
+        # init:
+        #   \delta_1 = \pi * B(:, o_1)
+        # induction:
+        #   \phi_t = argmax(\delta_{t-1} * A.T, axis=1)
+        #   \delta_t = max(\delta_{t-1} * A.T, axis=1) * B(:, o_t)
+        delta_t = self.pi
+        phi_t = np.zeros(self.total_states)
+        for t, o_t in enumerate(ob):
+            delta_t *= self.B[:, o_t]
+            delta[t] = delta_t
+            phi[t] = phi_t
+            phi_t = np.argmax(delta_t * self.A.T, axis=1)
+            delta_t = np.max(delta_t * self.A.T, axis=1)
 
         # End Assignment
 
@@ -156,3 +224,6 @@ if __name__ == "__main__":
     print(p, '\n', bwd)
     prob, path = model.viterbi(observations)
     print(prob, '\n', path)
+
+    # (DCMMC) Sanity check
+    sanity_grader_hmm()
