@@ -52,6 +52,25 @@ class HMM:
         # Begin Assignment
 
         # PUT YOUR CODE HERE.
+        # Forward algorithm:
+        # Input: O = o_1, o_2, \cdots, o_T, \lambda = {\pi, A, B}
+        # > O: observations, \pi: initial probability, A: state transition matrix, B: emission matrix.
+        # Output: P(O | \lambda)
+        #   # Law of total prob for all valid hidden state seq Q = q_1, q_2, \cdots, q_T
+        #   = \sum_{Q} P(O, Q | \lambda)
+        #   = \sum_Q P(O | Q, \lambda) P(Q | \lambda) # Bayes
+        #   = \sum_Q \prod_{t=1}^T B(q_t, o_t) \pi(q_1) \prod_{t=2}^T A(q_{t-1}, q_t)
+        #
+        # In matrix operation form:
+        # \pi^{(0)} = \pi, Fwd(o_1) = \pi^{(1)} = \pi^{(0)} * B(:, o_1), P(o_1) = sum(Fwd(o_1))
+        # ...
+        # Fwd(o_1, \cdots, o_T) = \pi^{(T)} = \pi^{(T-1)} * B(:, o_T)
+        # Output: P(o_1, \cdots, o_T) = sum(Fwd(o_1. \cdots, o_T))
+        # Complexity: O(T * N^2)
+        pi_t = self.pi
+        for t, o_t in enumerate(ob):
+            fwd[t] = pi_t * self.B[:, o_t]
+            pi_t = fwd[t] @ self.A
 
         # End Assignment
 
@@ -78,6 +97,12 @@ class HMM:
         # Begin Assignment
 
         # PUT YOUR CODE HERE.
+        # The formula is similar to forward algorithm, but inducted backward.
+        # Complexity: O(T * N^2)
+        beta_t = np.ones(self.total_states)
+        for t, o_t in enumerate(reversed(ob)):
+            bwd[-1-t] = beta_t.T
+            beta_t = self.A @ (self.B[:, o_t] * beta_t)
 
         # End Assignment
 
